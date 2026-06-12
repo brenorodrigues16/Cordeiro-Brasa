@@ -1,10 +1,11 @@
+
 // ═══════════════════════════════════════════
 // ⚙️ CONFIGURAÇÕES — EDITE AQUI
 // ═══════════════════════════════════════════
 const CONFIG = {
   storeName: "Cordeiro & Brasa",
   whatsappNumber: "5511953696491",   // ← SEU NÚMERO com DDI+DDD
-  deliveryTax: 1.40,
+  deliveryFee: 4.00,
   minOrder: 25.00,
   instagram: "@cordeiroebrasa_",
 };
@@ -69,7 +70,7 @@ const MENU = [
       },
       {
         id: "p2", name: "Batata Recheada",
-        desc: "300g de batata parafuso, bacon, cheddar, queijo ralado e sal — a medida certa!",
+        desc: "300g de batata parafuso, bacon, cheddar, queijo ralado e sal — a pedida certa!",
         price: 21.90, img: "", emoji: "🧀", available: true,
       },
       {
@@ -378,22 +379,9 @@ function updateCartUI() {
 function sendWhatsApp() {
   if (!cart.length) return;
 
-  // 1. Verifica se já temos os dados do cliente
-  const dadosSalvos = localStorage.getItem('clienteCordeiro');
-  
-  // Se for entrega e não tivermos dados, abre o modal em vez de enviar
-  if (deliveryType === 'delivery' && !dadosSalvos) {
-    document.getElementById('modal-cliente').style.display = 'flex';
-    return; // Interrompe o envio para abrir o modal
-  }
-
-  // 2. Monta a mensagem (com os dados do cliente, se existirem)
-  const cliente = dadosSalvos ? JSON.parse(dadosSalvos) : null;
   const sub = cart.reduce((s,i) => s + i.item.price * i.qty, 0);
   const fee = deliveryType === 'delivery' ? CONFIG.deliveryFee : 0;
-  
-  let msg = `*Meu Pedido no Cordeiro & Brasa* 🔥🐑\n\n*Cliente:* ${cliente ? cliente.nome : 'Não informado'}\n*Endereço:* ${cliente ? cliente.endereco : 'Retirada no local'}\n\n*Itens:*\n`;
-  
+  let msg = `*Olá! Pedido no Cordeiro & Brasa* 🔥🐑\n\n*Itens:*\n`;
   cart.forEach(ci => {
     msg += `• ${ci.qty}× ${ci.item.name} — ${fmt(ci.item.price * ci.qty)}`;
     if (ci.obs) msg += `\n  _(${ci.obs})_`;
@@ -407,78 +395,9 @@ function sendWhatsApp() {
   window.open(`https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-
-// --- Função principal que salva e calcula ---
-async function salvarDados() {
-  const nome = document.getElementById('nome-cliente').value;
-  const enderecoInput = document.getElementById('endereco-cliente').value;
-  const enderecoCompleto = enderecoInput + ", Suzano - SP";
-
-  if (nome && enderecoInput) {
-    try {
-      // Usamos a função que você já tem configurada com o cálculo matemático
-      const taxa = await calcularTaxaGeografica(enderecoCompleto);
-      
-      // Salva os dados no navegador
-      const dados = { nome, endereco: enderecoCompleto, taxa: taxa };
-      localStorage.setItem('clienteCordeiro', JSON.stringify(dados));
-      
-      // Fecha o modal
-      document.getElementById('modal-cliente').style.display = 'none';
-      
-      // Atualiza o total se a função existir
-      if (typeof updateCartTotals === 'function') {
-        updateCartTotals(); 
-      }
-      
-      // Segue para o envio
-      enviarPedidoWhatsApp(); 
-    } catch (e) {
-      console.error(e);
-      alert("Não conseguimos calcular a distância. Verifique o endereço e tente novamente.");
-    }
-  } else {
-    alert("Por favor, preencha o nome e o endereço.");
-  }
-}
-
-// --- Função que verifica se o cliente já existe ---
-function verificarClienteEEnviar() {
-  const dadosSalvos = localStorage.getItem('clienteCordeiro');
-  
-  if (dadosSalvos) {
-    enviarPedidoWhatsApp();
-  } else {
-    document.getElementById('modal-cliente').style.display = 'flex';
-  }
-}
-
-// --- Coordenadas da Cordeiro & Brasa (Exatas) ---
-const COORD_LOJA = { lat: -23.5413, lon: -46.3151 }; 
-
-async function calcularTaxaGeografica(enderecoCliente) {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCliente)}`;
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    if (data.length === 0) throw new Error("Endereço não encontrado");
-    
-    const latCliente = parseFloat(data[0].lat);
-    const lonCliente = parseFloat(data[0].lon);
-    
-    const R = 6371; 
-    const dLat = (latCliente - COORD_LOJA.lat) * Math.PI / 180;
-    const dLon = (lonCliente - COORD_LOJA.lon) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(COORD_LOJA.lat * Math.PI / 180) * Math.cos(latCliente * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const distanciaKm = R * c;
-    
-    const taxa = Math.max(4.00, distanciaKm * 1.40);
-    return taxa.toFixed(2);
-}
-
+document.getElementById('productModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('productModal')) closeModal();
+});
 
 buildMenu();
 setupScrollSpy();
